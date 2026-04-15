@@ -10,7 +10,7 @@ async function getAccessTokenByOther() {
         await authApi.autoLogin();
     } else {
         try {
-            const newToken = await publicApi.post("auth/refresh-token", refreshToken);
+            const newToken = await publicApi.post("auth/refresh-token", { refreshToken });
             tokenService.setToken(newToken.data);
         } catch {
             return authApi.autoLogin();

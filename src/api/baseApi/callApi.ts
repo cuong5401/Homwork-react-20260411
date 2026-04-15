@@ -4,7 +4,10 @@ import tokenService from "./tokenService";
 import getAccessTokenByOther from "./accessTokenByOther";
 
 let isRefreshing = false;
-let waitingRequests: Array<() => void> = [];
+let waitingRequests: Array<{
+    resolve: () => void;
+    reject: (error: unknown) => void;
+}> = [];
 
 const callApi: AxiosInstance = axios.create({
     baseURL: BASE_URL,
@@ -15,8 +18,6 @@ const callApi: AxiosInstance = axios.create({
 callApi.interceptors.request.use(
     (config) => {
         const accessToken = tokenService.getAccessToken();
-        console.log(accessToken);
-
         if (accessToken) {
             config.headers.Authorization = `Bearer ${accessToken}`;
         }
@@ -29,15 +30,13 @@ callApi.interceptors.request.use(
 callApi.interceptors.response.use(
     (response) => response,
     async (error) => {
-        console.log(error.response?.status);
-
         const originalRequest = error.config;
 
         if (!originalRequest) {
             return Promise.reject(error);
         }
 
-        if (error.response?.status !== 401) {
+        if (error.response?.status !== 400 && error.response?.status !== 403) {
             return Promise.reject(error);
         }
 
@@ -47,10 +46,14 @@ callApi.interceptors.response.use(
 
         originalRequest._retry = true;
 
+        // nếu đang chạy refresh thì nên lưu các request lại
         if (isRefreshing) {
             return new Promise((resolve, reject) => {
-                waitingRequests.push(() => {
-                    callApi(originalRequest).then(resolve).catch(reject);
+                waitingRequests.push({
+                    resolve: () => {
+                        callApi(originalRequest).then(resolve).catch(reject);
+                    },
+                    reject,
                 });
             });
         }
@@ -60,11 +63,12 @@ callApi.interceptors.response.use(
         try {
             await getAccessTokenByOther();
 
-            waitingRequests.forEach((callback) => callback());
+            waitingRequests.forEach(({ resolve }) => resolve());
             waitingRequests = [];
 
             return callApi(originalRequest);
         } catch (refreshError) {
+            waitingRequests.forEach(({ reject }) => reject(refreshError));
             waitingRequests = [];
             return Promise.reject(refreshError);
         } finally {
