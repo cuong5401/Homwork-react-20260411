@@ -14,24 +14,24 @@ import Paper from "@mui/material/Paper";
 //   { key: "stock", title: "Tồn kho" },
 // ];
 
-function TableData({ cols, rows }) {
+function TableData({ colsData, rowsData }) {
     return (
         <TableContainer component={Paper}>
             <Table sx={{ minWidth: 650 }} aria-label="simple table">
                 <TableHead>
                     <TableRow>
-                        {cols.map((col) => (
+                        {colsData.map((col) => (
                             <TableCell key={col.key}>{col.title}</TableCell>
                         ))}
                     </TableRow>
                 </TableHead>
                 <TableBody>
-                    {rows.map((row) => {
+                    {rowsData.map((row) => {
                         return (
                             <TableRow key={row.id}>
-                                {cols.map((col) => {
+                                {colsData.map((col) => {
                                     if (typeof col.render === "function") {
-                                        return <TableCell key={col.key}>{col.render(row)}</TableCell>;
+                                        return <TableCell key={col.key}>{col.render(row.id)}</TableCell>;
                                     }
                                     return <TableCell key={col.key}>{row[col.key] ?? ""} </TableCell>;
                                 })}

@@ -11,6 +11,11 @@ const customerApi = {
         return res.data;
     },
 
+    async create(data) {
+        const res = await callApi.post(`/customers`, data);
+        return res.data;
+    },
+
     async editById(id: number | string, data: any) {
         const res = await callApi.put(`/customers/${id}`, data);
         return res.data;
