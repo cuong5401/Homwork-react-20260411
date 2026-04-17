@@ -1,17 +1,16 @@
-import { useState, useEffect } from "react";
-import customerApi from "./api/customerApi/customerApi";
-
-import TableData from "./components/TableData";
-import CustomerModal from "./components/CustomerModal";
-
+import { useEffect, useState } from "react";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import customerApi from "./api/customerApi/customerApi";
+import TableData from "./components/TableData";
+import CustomerModal from "./components/CustomerModal";
+import type { Column, CusTomer, CustomerFormData } from "./units";
 
 function App() {
-    const [customerList, setCustomerList] = useState([]);
+    const [customerList, setCustomerList] = useState<CusTomer[]>([]);
     const [modalOpen, setModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<"add" | "edit">("add");
-    const [selectedCustomer, setSelectedCustomer] = useState(null);
+    const [selectedCustomer, setSelectedCustomer] = useState<CusTomer | null>(null);
 
     useEffect(() => {
         const fetchCustomers = async () => {
@@ -23,32 +22,34 @@ function App() {
             }
         };
 
-        fetchCustomers();
+        void fetchCustomers();
     }, []);
 
-    const renderOperation = (id) => {
-        const handleEditCust = () => {
-            const customer = customerList.find((c) => c.id === id);
+    const renderOperation = (id: number) => {
+        const handleEditCustomer = () => {
+            const customer = customerList.find((item) => item.id === id);
+            if (!customer) return;
+
             setSelectedCustomer(customer);
             setModalMode("edit");
             setModalOpen(true);
         };
 
-        const handleDeleteCust = async () => {
-            const customer = customerList.find((c) => c.id === id);
+        const handleDeleteCustomer = async () => {
+            const customer = customerList.find((item) => item.id === id);
             if (!customer) return;
-            const isDelete = confirm(` bạn có muốn xóa khách hàng ${customer.name} không?`);
-            if (isDelete) {
-                await customerApi.deleteById(customer.id);
-                setCustomerList((pre) => pre.filter((c) => c.id !== id));
-                console.log(`đã xóa ${customer.name}`);
-            }
+
+            const isDelete = confirm(`Ban co muon xoa khach hang ${customer.name} khong?`);
+            if (!isDelete) return;
+
+            await customerApi.deleteById(customer.id);
+            setCustomerList((prev) => prev.filter((item) => item.id !== id));
         };
 
         return (
             <>
-                <EditIcon onClick={handleEditCust} style={{ marginRight: "8px", cursor: "pointer" }} />
-                <DeleteIcon onClick={handleDeleteCust} color="error" style={{ cursor: "pointer" }} />
+                <EditIcon onClick={handleEditCustomer} style={{ marginRight: "8px", cursor: "pointer" }} />
+                <DeleteIcon onClick={handleDeleteCustomer} color="error" style={{ cursor: "pointer" }} />
             </>
         );
     };
@@ -59,18 +60,15 @@ function App() {
         setModalOpen(true);
     };
 
-    const handleModalSubmit = async (data) => {
+    const handleModalSubmit = async (data: CustomerFormData) => {
         try {
             if (modalMode === "add") {
-                // Gọi API thêm mới
-                const res = await customerApi.create(data);
-                console.log("Thêm khách hàng:", res);
+                await customerApi.create(data);
             } else {
-                // Gọi API cập nhật
-                await customerApi.editById(data.id, data);
-                console.log("Cập nhật khách hàng:", data);
+                if (!selectedCustomer) return;
+                await customerApi.editById(selectedCustomer.id, data);
             }
-            // Refresh danh sách sau khi thêm/sửa
+
             const customers = await customerApi.getAll();
             setCustomerList(customers);
         } catch (error) {
@@ -78,17 +76,17 @@ function App() {
         }
     };
 
-    const cols = [
+    const cols: Column[] = [
         { key: "id", title: "id" },
-        { key: "name", title: "Tên" },
-        { key: "address", title: "Địa chỉ" },
+        { key: "name", title: "Ten" },
+        { key: "address", title: "Dia chi" },
         { key: "email", title: "Email" },
-        { key: "phone", title: "Số điện thoại" },
-        { key: "rank", title: "hạng" },
+        { key: "phone", title: "So dien thoai" },
+        { key: "rank", title: "Hang" },
         {
             key: "operation",
-            title: "thao tác",
-            render: (id) => renderOperation(id),
+            title: "Thao tac",
+            render: (id: number) => renderOperation(id),
         },
     ];
 
@@ -102,9 +100,11 @@ function App() {
                     cursor: "pointer",
                 }}
             >
-                + Thêm khách hàng
+                + Them khach hang
             </button>
+
             <TableData colsData={cols} rowsData={customerList} />
+
             <CustomerModal
                 open={modalOpen}
                 onClose={() => setModalOpen(false)}
